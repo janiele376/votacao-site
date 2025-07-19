@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title>Votação pubg</title>
+  <title>Votação Online</title>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
   <style>
@@ -15,21 +15,25 @@
 </head>
 <body>
 
-  <h1>Votação pubg</h1>
+  <h1>Votação Popular</h1>
 
   <div class="admin-area">
     <h2>Área do Administrador</h2>
     <input type="password" id="adminPass" placeholder="Senha do admin">
     <button onclick="loginAdmin()">Entrar</button>
-    <button id="logoutBtn" class="hidden" onclick="logoutAdmin()">Sair do Admin</button>
+    <button onclick="logoutAdmin()" id="logoutBtn" class="hidden">Sair do Admin</button>
+
     <div id="adminPanel" class="hidden">
       <input type="text" id="personName" placeholder="Nome da pessoa">
       <button onclick="addPerson()">Adicionar Pessoa</button>
+      <h3>Quem já votou:</h3>
+      <ul id="votantesList"></ul>
     </div>
   </div>
 
   <div class="vote-area">
-    <h2>Vote em alguém:</h2>
+    <h2>Digite seu nome para votar:</h2>
+    <input type="text" id="voterName" placeholder="Seu nome">
     <div id="voteList"></div>
   </div>
 
@@ -63,7 +67,6 @@
       document.getElementById("adminPanel").classList.remove("hidden");
       document.getElementById("logoutBtn").classList.remove("hidden");
       alert("Admin logado!");
-      renderPessoas(lastSnapshot); // Atualiza a exibição com botões de admin
     } else {
       alert("Senha incorreta");
     }
@@ -73,8 +76,6 @@
     isAdmin = false;
     document.getElementById("adminPanel").classList.add("hidden");
     document.getElementById("logoutBtn").classList.add("hidden");
-    alert("Admin desconectado.");
-    renderPessoas(lastSnapshot); // Atualiza a exibição sem botões de admin
   }
 
   function addPerson() {
@@ -93,20 +94,24 @@
   }
 
   function vote(nome) {
-    const ref = db.ref("pessoas/" + nome + "/votos");
-    ref.transaction(v => (v || 0) + 1);
-  }
+    const voter = document.getElementById("voterName").value.trim();
+    if (!voter) {
+      alert("Digite seu nome antes de votar!");
+      return;
+    }
 
-  function unvote(nome) {
-    if (!isAdmin) return;
-    const ref = db.ref("pessoas/" + nome + "/votos");
-    ref.transaction(v => Math.max((v || 0) - 1, 0));
+    db.ref("votantes/" + voter).once("value", snapshot => {
+      if (snapshot.exists()) {
+        alert("Você já votou!");
+      } else {
+        db.ref("pessoas/" + nome + "/votos").transaction(v => (v || 0) + 1);
+        db.ref("votantes/" + voter).set(true);
+        alert("Voto registrado com sucesso!");
+      }
+    });
   }
-
-  let lastSnapshot = null;
 
   function renderPessoas(snapshot) {
-    lastSnapshot = snapshot;
     const voteList = document.getElementById("voteList");
     const rankingList = document.getElementById("rankingList");
 
@@ -124,7 +129,6 @@
       div.innerHTML = `
         ${p.nome} 
         <button onclick="vote('${p.nome}')">Votar</button>
-        ${isAdmin ? `<button onclick="unvote('${p.nome}')">Tirar voto</button>` : ''}
         ${isAdmin ? `<button onclick="removePerson('${p.nome}')">Remover</button>` : ''}
       `;
       voteList.appendChild(div);
@@ -135,7 +139,21 @@
       .map(p => `<li>${p.nome} - ${p.votos} voto(s)</li>`).join('');
   }
 
+  function renderVotantes(snapshot) {
+    if (!isAdmin) return;
+    const ul = document.getElementById("votantesList");
+    ul.innerHTML = '';
+    snapshot.forEach(child => {
+      const nome = child.key;
+      const li = document.createElement("li");
+      li.textContent = nome;
+      ul.appendChild(li);
+    });
+  }
+
+  // Escuta mudanças no banco de dados
   db.ref("pessoas").on("value", renderPessoas);
+  db.ref("votantes").on("value", renderVotantes);
 </script>
 
 </body>
