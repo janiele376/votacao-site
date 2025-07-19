@@ -1,9 +1,8 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Votação Online</title>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
@@ -21,10 +20,10 @@
 
   <div class="admin-area">
     <h2>Área do Administrador</h2>
-    <input type="password" id="adminPass" placeholder="Senha do admin">
+    <input type="password" id="adminPass" placeholder="Senha do admin" />
     <button onclick="loginAdmin()">Entrar</button>
     <div id="adminPanel" class="hidden">
-      <input type="text" id="personName" placeholder="Nome da pessoa">
+      <input type="text" id="personName" placeholder="Nome da pessoa" />
       <button onclick="addPerson()">Adicionar Pessoa</button>
     </div>
   </div>
@@ -40,7 +39,6 @@
   </div>
 
 <script>
-  // ✅ Correto: usar compat API
   const firebaseConfig = {
     apiKey: "AIzaSyBR0RGWG5C8-CVG-RmJVUMEWstKGAVm5ig",
     authDomain: "votacao-pubg.firebaseapp.com",
@@ -52,39 +50,44 @@
     measurementId: "G-TZ8NMYLDZ2"
   };
 
-  // Inicialização correta
   firebase.initializeApp(firebaseConfig);
   const db = firebase.database();
 
   const senhaAdmin = "40028922";
   let isAdmin = false;
 
-let ultimoSnapshot = null; // guarda o snapshot atual para reuso no login admin
+  let ultimoSnapshot = null; // Guarda o snapshot atual para re-render
 
-function loginAdmin() {
-  const senha = document.getElementById("adminPass").value;
-  if (senha === senhaAdmin) {
-    isAdmin = true;
-    document.getElementById("adminPanel").classList.remove("hidden");
-    alert("Admin logado!");
-    // RE-RENDERIZA a lista para mostrar o botão remover em todas as pessoas
-    if (ultimoSnapshot) renderPessoas(ultimoSnapshot);
-  } else {
-    alert("Senha incorreta");
+  // Ao carregar a página, checa se o admin está logado no localStorage
+  window.onload = function() {
+    const adminSalvo = localStorage.getItem('adminLogado');
+    if(adminSalvo === 'true') {
+      isAdmin = true;
+      document.getElementById("adminPanel").classList.remove("hidden");
+      // Recarrega dados e renderiza com admin
+      db.ref("pessoas").once("value").then(snapshot => {
+        renderPessoas(snapshot);
+      });
+    }
+  };
+
+  function loginAdmin() {
+    const senha = document.getElementById("adminPass").value;
+    if (senha === senhaAdmin) {
+      isAdmin = true;
+      localStorage.setItem('adminLogado', 'true'); // Salva login
+      document.getElementById("adminPanel").classList.remove("hidden");
+      alert("Admin logado!");
+      if (ultimoSnapshot) renderPessoas(ultimoSnapshot);
+    } else {
+      alert("Senha incorreta");
+    }
   }
-}
-
-function renderPessoas(snapshot) {
-  ultimoSnapshot = snapshot; // guarda para reuso no login admin
-  // resto do código...
-}
-
 
   function addPerson() {
     const nome = document.getElementById("personName").value.trim();
     if (!nome) return;
-    const pessoaRef = db.ref("pessoas/" + nome);
-    pessoaRef.set({ votos: 0 });
+    db.ref("pessoas/" + nome).set({ votos: 0 });
     document.getElementById("personName").value = '';
   }
 
@@ -106,6 +109,8 @@ function renderPessoas(snapshot) {
   }
 
   function renderPessoas(snapshot) {
+    ultimoSnapshot = snapshot; // guarda para reuso no login admin
+
     const voteList = document.getElementById("voteList");
     const rankingList = document.getElementById("rankingList");
 
@@ -136,7 +141,7 @@ function renderPessoas(snapshot) {
 
   // Escuta mudanças no banco de dados
   db.ref("pessoas").on("value", renderPessoas);
-</script>
 
+</script>
 </body>
 </html>
