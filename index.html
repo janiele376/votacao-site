@@ -56,15 +56,13 @@
   const senhaAdmin = "40028922";
   let isAdmin = false;
 
-  let ultimoSnapshot = null; // Guarda o snapshot atual para re-render
+  let ultimoSnapshot = null;
 
-  // Ao carregar a página, checa se o admin está logado no localStorage
   window.onload = function() {
     const adminSalvo = localStorage.getItem('adminLogado');
     if(adminSalvo === 'true') {
       isAdmin = true;
       document.getElementById("adminPanel").classList.remove("hidden");
-      // Recarrega dados e renderiza com admin
       db.ref("pessoas").once("value").then(snapshot => {
         renderPessoas(snapshot);
       });
@@ -75,7 +73,7 @@
     const senha = document.getElementById("adminPass").value;
     if (senha === senhaAdmin) {
       isAdmin = true;
-      localStorage.setItem('adminLogado', 'true'); // Salva login
+      localStorage.setItem('adminLogado', 'true');
       document.getElementById("adminPanel").classList.remove("hidden");
       alert("Admin logado!");
       if (ultimoSnapshot) renderPessoas(ultimoSnapshot);
@@ -109,7 +107,7 @@
   }
 
   function renderPessoas(snapshot) {
-    ultimoSnapshot = snapshot; // guarda para reuso no login admin
+    ultimoSnapshot = snapshot;
 
     const voteList = document.getElementById("voteList");
     const rankingList = document.getElementById("rankingList");
@@ -128,7 +126,7 @@
       div.innerHTML = `
         ${p.nome} 
         <button onclick="vote('${p.nome}')">Votar</button>
-        <button onclick="unvote('${p.nome}')">Tirar voto</button>
+        ${isAdmin ? `<button onclick="unvote('${p.nome}')">Tirar voto</button>` : ''}
         ${isAdmin ? `<button onclick="removePerson('${p.nome}')">Remover</button>` : ''}
       `;
       voteList.appendChild(div);
@@ -139,7 +137,6 @@
       .map(p => `<li>${p.nome} - ${p.votos} voto(s)</li>`).join('');
   }
 
-  // Escuta mudanças no banco de dados
   db.ref("pessoas").on("value", renderPessoas);
 
 </script>
