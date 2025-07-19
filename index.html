@@ -67,6 +67,9 @@
       document.getElementById("adminPanel").classList.remove("hidden");
       document.getElementById("logoutBtn").classList.remove("hidden");
       alert("Admin logado!");
+      // Re-render para mostrar botões admin
+      db.ref("pessoas").once("value").then(renderPessoas);
+      db.ref("votantes").once("value").then(renderVotantes);
     } else {
       alert("Senha incorreta");
     }
@@ -76,7 +79,9 @@
     isAdmin = false;
     document.getElementById("adminPanel").classList.add("hidden");
     document.getElementById("logoutBtn").classList.add("hidden");
-    document.getElementById("votantesList").innerHTML = ''; // limpa lista votantes ao sair
+    document.getElementById("votantesList").innerHTML = '';
+    // Re-render para esconder botões admin
+    db.ref("pessoas").once("value").then(renderPessoas);
   }
 
   function addPerson() {
@@ -94,29 +99,53 @@
     }
   }
 
-  function vote(nome) {
+  function vote(nomeCandidato) {
     const voter = document.getElementById("voterName").value.trim();
     if (!voter) {
       alert("Digite seu nome antes de votar!");
       return;
     }
 
-    db.ref("votantes/" + voter).once("value", snapshot => {
+    const votanteRef = db.ref("votantes/" + voter);
+
+    votanteRef.once("value", snapshot => {
       if (snapshot.exists()) {
         alert("Você já votou!");
       } else {
-        db.ref("pessoas/" + nome + "/votos").transaction(v => (v || 0) + 1);
-        db.ref("votantes/" + voter).set(true);
-        alert("Voto registrado com sucesso!");
+        // Salvar o nome do candidato votado
+        votanteRef.set(nomeCandidato).then(() => {
+          // Incrementa voto do candidato
+          db.ref("pessoas/" + nomeCandidato + "/votos").transaction(v => (v || 0) + 1);
+          alert("Voto registrado com sucesso!");
+        });
       }
     });
   }
 
-  function removeVotante(nome) {
+  function removeVotante(nomeVotante) {
     if (!isAdmin) return;
-    if (confirm(`Deseja remover o votante "${nome}"? Isso permitirá que ele vote novamente.`)) {
-      db.ref("votantes/" + nome).remove();
-      alert(`Votante "${nome}" removido.`);
+    if (confirm(`Deseja remover o votante "${nomeVotante}"? Isso permitirá que ele vote novamente.`)) {
+      const votanteRef = db.ref("votantes/" + nomeVotante);
+
+      votanteRef.once("value", snapshot => {
+        if (snapshot.exists()) {
+          const candidatoVotado = snapshot.val();
+
+          // Remove o votante
+          votanteRef.remove().then(() => {
+            // Diminuir o voto do candidato votado
+            const votoRef = db.ref("pessoas/" + candidatoVotado + "/votos");
+            votoRef.transaction(v => {
+              if (!v || v <= 0) return 0;
+              return v - 1;
+            });
+
+            alert(`Votante "${nomeVotante}" removido e voto de "${candidatoVotado}" atualizado.`);
+          });
+        } else {
+          alert("Votante não encontrado.");
+        }
+      });
     }
   }
 
@@ -146,11 +175,15 @@
     pessoas.forEach(p => {
       const div = document.createElement("div");
       div.className = "person";
-      div.innerHTML = `
-        ${p.nome} 
-        <button onclick="vote('${p.nome}')">Votar</button>
-        ${isAdmin ? `<button onclick="removePerson('${p.nome}')">Remover</button> <button onclick="removeVote('${p.nome}')">Remover voto</button>` : ''}
-      `;
+
+      let inner = `${p.nome} `;
+      inner += `<button onclick="vote('${p.nome}')">Votar</button>`;
+
+      if (isAdmin) {
+        inner += ` <button onclick="removePerson('${p.nome}')">Remover</button>`;
+        inner += ` <button onclick="removeVote('${p.nome}')">Remover voto</button>`;
+      }
+      div.innerHTML = inner;
       voteList.appendChild(div);
     });
 
@@ -168,7 +201,6 @@
       const li = document.createElement("li");
       li.textContent = nome + " ";
 
-      // Botão remover para admin
       const btnRemover = document.createElement("button");
       btnRemover.textContent = "Remover votante";
       btnRemover.onclick = () => removeVotante(nome);
