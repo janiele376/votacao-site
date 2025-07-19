@@ -61,10 +61,9 @@ const firebaseConfig = {
   measurementId: "G-TZ8NMYLDZ2"
 };
 
-
-  // Inicializa Firebase
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.database();
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
 
   let isAdmin = false;
 
