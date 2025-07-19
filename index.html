@@ -76,6 +76,7 @@
     isAdmin = false;
     document.getElementById("adminPanel").classList.add("hidden");
     document.getElementById("logoutBtn").classList.add("hidden");
+    document.getElementById("votantesList").innerHTML = ''; // limpa lista votantes ao sair
   }
 
   function addPerson() {
@@ -109,6 +110,14 @@
         alert("Voto registrado com sucesso!");
       }
     });
+  }
+
+  function removeVotante(nome) {
+    if (!isAdmin) return;
+    if (confirm(`Deseja remover o votante "${nome}"? Isso permitirá que ele vote novamente.`)) {
+      db.ref("votantes/" + nome).remove();
+      alert(`Votante "${nome}" removido.`);
+    }
   }
 
   function renderPessoas(snapshot) {
@@ -146,7 +155,14 @@
     snapshot.forEach(child => {
       const nome = child.key;
       const li = document.createElement("li");
-      li.textContent = nome;
+      li.textContent = nome + " ";
+
+      // Botão remover para admin
+      const btnRemover = document.createElement("button");
+      btnRemover.textContent = "Remover votante";
+      btnRemover.onclick = () => removeVotante(nome);
+      li.appendChild(btnRemover);
+
       ul.appendChild(li);
     });
   }
