@@ -2,22 +2,21 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title>Votação Popular</title>
+  <title>Votação Online</title>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
   <style>
-    body { font-family: Arial; background: #f2f2f2; padding: 20px; }
-    h1 { color: #333; }
-    .admin-area, .vote-area { margin-bottom: 20px; }
-    button { margin-top: 5px; margin-left: 5px; }
+    body { font-family: Arial, sans-serif; background: #f2f2f2; padding: 20px; }
+    h1, h2 { color: #333; }
     .hidden { display: none; }
-    .ranking { margin-top: 20px; }
-    .ranking li { margin: 5px 0; }
     .person { margin: 10px 0; }
+    button { margin-left: 5px; }
   </style>
 </head>
 <body>
-  <h1>Mini Sistema de Votação</h1>
 
-  <!-- ADMINISTRADOR -->
+  <h1>Votação Popular</h1>
+
   <div class="admin-area">
     <h2>Área do Administrador</h2>
     <input type="password" id="adminPass" placeholder="Senha do admin">
@@ -28,98 +27,114 @@
     </div>
   </div>
 
-  <!-- USUÁRIOS VISITANTES -->
   <div class="vote-area">
     <h2>Vote em alguém:</h2>
     <div id="voteList"></div>
   </div>
 
-  <!-- RANKING -->
   <div class="ranking">
     <h2>Ranking Atual:</h2>
     <ol id="rankingList"></ol>
   </div>
 
-  <script>
-    let pessoas = [];
-    let votos = {};
-    const senhaAdmin = "40028922";
-    let isAdmin = false;
+<script>
+// Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
 
-    function loginAdmin() {
-      const senha = document.getElementById("adminPass").value;
-      if (senha === senhaAdmin) {
-        isAdmin = true;
-        document.getElementById("adminPanel").classList.remove("hidden");
-        updateVoteList(); // Atualiza com botões extras
-        alert("Acesso liberado!");
-      } else {
-        alert("Senha incorreta!");
-      }
-    }
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyBR0RGWG5C8-CVG-RmJVUMEWstKGAVm5ig",
+  authDomain: "votacao-pubg.firebaseapp.com",
+  databaseURL: "https://votacao-pubg-default-rtdb.firebaseio.com",
+  projectId: "votacao-pubg",
+  storageBucket: "votacao-pubg.firebasestorage.app",
+  messagingSenderId: "578854045975",
+  appId: "1:578854045975:web:26fb5c2fcc814ab59b8f52",
+  measurementId: "G-TZ8NMYLDZ2"
+};
 
-    function addPerson() {
-      const nome = document.getElementById("personName").value.trim();
-      if (nome && !pessoas.includes(nome)) {
-        pessoas.push(nome);
-        votos[nome] = 0;
-        updateVoteList();
-        updateRanking();
-        document.getElementById("personName").value = '';
-      } else {
-        alert("Nome inválido ou já existente.");
-      }
-    }
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
 
-    function removePerson(nome) {
-      if (!isAdmin) return;
-      if (confirm(`Deseja realmente remover ${nome}?`)) {
-        pessoas = pessoas.filter(p => p !== nome);
-        delete votos[nome];
-        updateVoteList();
-        updateRanking();
-      }
-    }
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
 
-    function vote(nome) {
-      votos[nome]++;
-      updateRanking();
-      alert(`Você votou em ${nome}!`);
-    }
+  const senhaAdmin = "40028922";
+  let isAdmin = false;
 
-    function unvote(nome) {
-      if (votos[nome] > 0) {
-        votos[nome]--;
-        updateRanking();
-        alert(`Você retirou um voto de ${nome}.`);
-      } else {
-        alert(`${nome} já está com zero votos.`);
-      }
+  function loginAdmin() {
+    const senha = document.getElementById("adminPass").value;
+    if (senha === senhaAdmin) {
+      isAdmin = true;
+      document.getElementById("adminPanel").classList.remove("hidden");
+      alert("Admin logado!");
+    } else {
+      alert("Senha incorreta");
     }
+  }
 
-    function updateVoteList() {
-      const voteDiv = document.getElementById("voteList");
-      voteDiv.innerHTML = "";
-      pessoas.forEach(nome => {
-        const div = document.createElement("div");
-        div.className = "person";
-        div.innerHTML = `
-          ${nome} 
-          <button onclick="vote('${nome}')">Votar</button>
-          <button onclick="unvote('${nome}')">Retirar voto</button>
-          ${isAdmin ? `<button onclick="removePerson('${nome}')">Remover pessoa</button>` : ''}
-        `;
-        voteDiv.appendChild(div);
-      });
-    }
+  function addPerson() {
+    const nome = document.getElementById("personName").value.trim();
+    if (!nome) return;
+    const pessoaRef = db.ref("pessoas/" + nome);
+    pessoaRef.set({ votos: 0 });
+    document.getElementById("personName").value = '';
+  }
 
-    function updateRanking() {
-      const ranking = Object.entries(votos)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 12);
-      const rankingList = document.getElementById("rankingList");
-      rankingList.innerHTML = ranking.map(([nome, votos]) => `<li>${nome} - ${votos} voto(s)</li>`).join("");
+  function removePerson(nome) {
+    if (!isAdmin) return;
+    if (confirm(`Deseja remover ${nome}?`)) {
+      db.ref("pessoas/" + nome).remove();
     }
-  </script>
+  }
+
+  function vote(nome) {
+    const ref = db.ref("pessoas/" + nome + "/votos");
+    ref.transaction(v => (v || 0) + 1);
+  }
+
+  function unvote(nome) {
+    const ref = db.ref("pessoas/" + nome + "/votos");
+    ref.transaction(v => Math.max((v || 0) - 1, 0));
+  }
+
+  function renderPessoas(snapshot) {
+    const voteList = document.getElementById("voteList");
+    const rankingList = document.getElementById("rankingList");
+
+    const pessoas = [];
+    snapshot.forEach(child => {
+      const nome = child.key;
+      const votos = child.val().votos || 0;
+      pessoas.push({ nome, votos });
+    });
+
+    voteList.innerHTML = '';
+    pessoas.forEach(p => {
+      const div = document.createElement("div");
+      div.className = "person";
+      div.innerHTML = `
+        ${p.nome} 
+        <button onclick="vote('${p.nome}')">Votar</button>
+        <button onclick="unvote('${p.nome}')">Tirar voto</button>
+        ${isAdmin ? `<button onclick="removePerson('${p.nome}')">Remover</button>` : ''}
+      `;
+      voteList.appendChild(div);
+    });
+
+    pessoas.sort((a, b) => b.votos - a.votos);
+    rankingList.innerHTML = pessoas.slice(0, 12)
+      .map(p => `<li>${p.nome} - ${p.votos} voto(s)</li>`).join('');
+  }
+
+  // Escuta mudanças no banco de dados
+  db.ref("pessoas").on("value", renderPessoas);
+</script>
+
 </body>
 </html>
