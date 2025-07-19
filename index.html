@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Votação Online</title>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
@@ -19,12 +19,12 @@
 
   <div class="admin-area">
     <h2>Área do Administrador</h2>
-    <input type="password" id="adminPass" placeholder="Senha do admin">
+    <input type="password" id="adminPass" placeholder="Senha do admin" />
     <button onclick="loginAdmin()">Entrar</button>
     <button onclick="logoutAdmin()" id="logoutBtn" class="hidden">Sair do Admin</button>
 
     <div id="adminPanel" class="hidden">
-      <input type="text" id="personName" placeholder="Nome da pessoa">
+      <input type="text" id="personName" placeholder="Nome da pessoa" />
       <button onclick="addPerson()">Adicionar Pessoa</button>
       <h3>Quem já votou:</h3>
       <ul id="votantesList"></ul>
@@ -33,7 +33,7 @@
 
   <div class="vote-area">
     <h2>Digite seu nome para votar:</h2>
-    <input type="text" id="voterName" placeholder="Seu nome">
+    <input type="text" id="voterName" placeholder="Seu nome" />
     <div id="voteList"></div>
   </div>
 
@@ -120,6 +120,17 @@
     }
   }
 
+  function removeVote(nome) {
+    if (!isAdmin) return;
+    if (confirm(`Deseja remover um voto de "${nome}"?`)) {
+      const votoRef = db.ref("pessoas/" + nome + "/votos");
+      votoRef.transaction(v => {
+        if (!v || v <= 0) return 0;
+        return v - 1;
+      });
+    }
+  }
+
   function renderPessoas(snapshot) {
     const voteList = document.getElementById("voteList");
     const rankingList = document.getElementById("rankingList");
@@ -138,7 +149,7 @@
       div.innerHTML = `
         ${p.nome} 
         <button onclick="vote('${p.nome}')">Votar</button>
-        ${isAdmin ? `<button onclick="removePerson('${p.nome}')">Remover</button>` : ''}
+        ${isAdmin ? `<button onclick="removePerson('${p.nome}')">Remover</button> <button onclick="removeVote('${p.nome}')">Remover voto</button>` : ''}
       `;
       voteList.appendChild(div);
     });
