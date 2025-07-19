@@ -105,10 +105,7 @@ const analytics = getAnalytics(app);
   function removerCandidato(nome) {
     if (!confirm(`Remover o candidato ${nome}?`)) return;
     db.ref('candidatos/' + nome).remove();
-    // Remove também votos e votos dos votantes para esse candidato
     db.ref('votos/' + nome).remove();
-
-    // Atualizar votos de cada votante para esse candidato
     db.ref('votantes').once('value', snapshot => {
       snapshot.forEach(userSnap => {
         if (userSnap.hasChild(nome)) {
@@ -156,6 +153,8 @@ const analytics = getAnalytics(app);
     const ul = document.getElementById('listaVotantes');
     db.ref('votantes').on('value', snapshot => {
       ul.innerHTML = '';
+      if (!isAdmin) return; // garante que só admin veja
+
       const votantes = snapshot.val() || {};
       Object.entries(votantes).forEach(([nome, votos]) => {
         const li = document.createElement('li');
@@ -187,13 +186,18 @@ const analytics = getAnalytics(app);
   }
 
   function votar(nomeCandidato) {
-    const nomeVotante = prompt('Digite seu nome para votar:').trim();
+    const nomeVotante = prompt('Digite seu nome para votar:');
     if (!nomeVotante) {
       alert('Nome obrigatório para votar!');
       return;
     }
+    const nomeVotanteTrim = nomeVotante.trim();
+    if (!nomeVotanteTrim) {
+      alert('Nome inválido!');
+      return;
+    }
 
-    const refVotanteCandidato = db.ref(`votantes/${nomeVotante}/${nomeCandidato}`);
+    const refVotanteCandidato = db.ref(`votantes/${nomeVotanteTrim}/${nomeCandidato}`);
 
     refVotanteCandidato.once('value').then(snapshot => {
       if (snapshot.exists()) {
