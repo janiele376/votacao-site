@@ -1,218 +1,406 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <title>Votação Online</title>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
-  <style>
-    body { font-family: Arial, sans-serif; background: #f2f2f2; padding: 20px; }
-    h1, h2 { color: #333; }
-    .hidden { display: none; }
-    .person { margin: 10px 0; }
-    button { margin-left: 5px; }
-  </style>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Votação Online</title>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient to right, #ece9e6, #ffffff;
+            color: #333;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 0;
+            min-height: 100vh;
+        }
+        h1, h2 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .container {
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+            width: 100%;
+            max-width: 600px;
+        }
+        .hidden {
+            display: none;
+        }
+        .person {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .person:last-child {
+            border-bottom: none;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            margin-left: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button.danger {
+            background-color: #dc3545;
+        }
+        button.danger:hover {
+            background-color: #c82333;
+        }
+        input[type="text"], input[type="password"] {
+            width: calc(100% - 22px);
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        ul, ol {
+            list-style: none;
+            padding: 0;
+        }
+        li {
+            padding: 8px 0;
+            border-bottom: 1px dotted #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        li:last-child {
+            border-bottom: none;
+        }
+        #rankingList li {
+            font-weight: bold;
+            color: #34495e;
+        }
+    </style>
 </head>
 <body>
 
-  <h1>Votação Popular</h1>
+    <h1>🗳️ Votação Popular 🗳️</h1>
 
-  <div class="admin-area">
-    <h2>Área do Administrador</h2>
-    <input type="password" id="adminPass" placeholder="Senha do admin" />
-    <button onclick="loginAdmin()">Entrar</button>
-    <button onclick="logoutAdmin()" id="logoutBtn" class="hidden">Sair do Admin</button>
+    <div class="container admin-area">
+        <h2>Área do Administrador</h2>
+        <input type="text" id="adminEmail" placeholder="Email do Admin" />
+        <input type="password" id="adminPass" placeholder="Senha do Admin" />
+        <button onclick="loginAdmin()">Entrar</button>
+        <button onclick="logoutAdmin()" id="logoutBtn" class="hidden danger">Sair do Admin</button>
 
-    <div id="adminPanel" class="hidden">
-      <input type="text" id="personName" placeholder="Nome da pessoa" />
-      <button onclick="addPerson()">Adicionar Pessoa</button>
-      <h3>Quem já votou:</h3>
-      <ul id="votantesList"></ul>
+        <div id="adminPanel" class="hidden">
+            <hr>
+            <h3>Gerenciar Pessoas</h3>
+            <input type="text" id="personName" placeholder="Nome da pessoa" />
+            <button onclick="addPerson()">Adicionar Pessoa</button>
+            <hr>
+            <h3>Quem já votou:</h3>
+            <ul id="votantesList"></ul>
+        </div>
     </div>
-  </div>
 
-  <div class="vote-area">
-    <h2>Digite seu nome para votar:</h2>
-    <input type="text" id="voterName" placeholder="Seu nome" />
-    <div id="voteList"></div>
-  </div>
+    <div class="container vote-area">
+        <h2>Vote no seu Favorito!</h2>
+        <input type="text" id="voterName" placeholder="Seu nome completo" />
+        <div id="voteList"></div>
+    </div>
 
-  <div class="ranking">
-    <h2>Ranking Atual:</h2>
-    <ol id="rankingList"></ol>
-  </div>
+    <div class="container ranking">
+        <h2>🏆 Ranking Atual:</h2>
+        <ol id="rankingList"></ol>
+    </div>
 
 <script>
-  const firebaseConfig = {
-    apiKey: "AIzaSyBR0RGWG5C8-CVG-RmJVUMEWstKGAVm5ig",
-    authDomain: "votacao-pubg.firebaseapp.com",
-    databaseURL: "https://votacao-pubg-default-rtdb.firebaseio.com",
-    projectId: "votacao-pubg",
-    storageBucket: "votacao-pubg.appspot.com",
-    messagingSenderId: "578854045975",
-    appId: "1:578854045975:web:26fb5c2fcc814ab59b8f52",
-    measurementId: "G-TZ8NMYLDZ2"
-  };
+    // Configuração do Firebase
+    const firebaseConfig = {
+        apiKey: "AIzaSyBR0RGWG5C8-CVG-RmJVUMEWstKGAVm5ig",
+        authDomain: "votacao-pubg.firebaseapp.com",
+        databaseURL: "https://votacao-pubg-default-rtdb.firebaseio.com",
+        projectId: "votacao-pubg",
+        storageBucket: "votacao-pubg.appspot.com",
+        messagingSenderId: "578854045975",
+        appId: "1:578854045975:web:26fb5c2fcc814ab59b8f52",
+        measurementId: "G-TZ8NMYLDZ2"
+    };
 
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.database();
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.database();
 
-  const senhaAdmin = "40028922";
-  let isAdmin = false;
+    let isAdmin = false; // Flag para controlar o estado do administrador
 
-  function loginAdmin() {
-    const senha = document.getElementById("adminPass").value;
-    if (senha === senhaAdmin) {
-      isAdmin = true;
-      document.getElementById("adminPanel").classList.remove("hidden");
-      document.getElementById("logoutBtn").classList.remove("hidden");
-      alert("Admin logado!");
-      // Re-render para mostrar botões admin
-      db.ref("pessoas").once("value").then(renderPessoas);
-      db.ref("votantes").once("value").then(renderVotantes);
-    } else {
-      alert("Senha incorreta");
-    }
-  }
+    // --- Funções de Autenticação do Administrador ---
 
-  function logoutAdmin() {
-    isAdmin = false;
-    document.getElementById("adminPanel").classList.add("hidden");
-    document.getElementById("logoutBtn").classList.add("hidden");
-    document.getElementById("votantesList").innerHTML = '';
-    // Re-render para esconder botões admin
-    db.ref("pessoas").once("value").then(renderPessoas);
-  }
+    function loginAdmin() {
+        const email = document.getElementById("adminEmail").value;
+        const password = document.getElementById("adminPass").value;
 
-  function addPerson() {
-    const nome = document.getElementById("personName").value.trim();
-    if (!nome) return;
-    const pessoaRef = db.ref("pessoas/" + nome);
-    pessoaRef.set({ votos: 0 });
-    document.getElementById("personName").value = '';
-  }
-
-  function removePerson(nome) {
-    if (!isAdmin) return;
-    if (confirm(`Deseja remover ${nome}?`)) {
-      db.ref("pessoas/" + nome).remove();
-    }
-  }
-
-  function vote(nomeCandidato) {
-    const voter = document.getElementById("voterName").value.trim();
-    if (!voter) {
-      alert("Digite seu nome antes de votar!");
-      return;
-    }
-
-    const votanteRef = db.ref("votantes/" + voter);
-
-    votanteRef.once("value", snapshot => {
-      if (snapshot.exists()) {
-        alert("Você já votou!");
-      } else {
-        // Salvar o nome do candidato votado
-        votanteRef.set(nomeCandidato).then(() => {
-          // Incrementa voto do candidato
-          db.ref("pessoas/" + nomeCandidato + "/votos").transaction(v => (v || 0) + 1);
-          alert("Voto registrado com sucesso!");
-        });
-      }
-    });
-  }
-
-  function removeVotante(nomeVotante) {
-    if (!isAdmin) return;
-    if (confirm(`Deseja remover o votante "${nomeVotante}"? Isso permitirá que ele vote novamente.`)) {
-      const votanteRef = db.ref("votantes/" + nomeVotante);
-
-      votanteRef.once("value", snapshot => {
-        if (snapshot.exists()) {
-          const candidatoVotado = snapshot.val();
-
-          // Remove o votante
-          votanteRef.remove().then(() => {
-            // Diminuir o voto do candidato votado
-            const votoRef = db.ref("pessoas/" + candidatoVotado + "/votos");
-            votoRef.transaction(v => {
-              if (!v || v <= 0) return 0;
-              return v - 1;
-            });
-
-            alert(`Votante "${nomeVotante}" removido e voto de "${candidatoVotado}" atualizado.`);
-          });
-        } else {
-          alert("Votante não encontrado.");
+        if (!email || !password) {
+            alert("Por favor, preencha o email e a senha do administrador.");
+            return;
         }
-      });
+
+        auth.signInWithEmailAndPassword(email, password)
+            .then((userCredential) => {
+                // Login bem-sucedido
+                isAdmin = true;
+                document.getElementById("adminPanel").classList.remove("hidden");
+                document.getElementById("logoutBtn").classList.remove("hidden");
+                alert("🎉 Admin logado com sucesso!");
+                document.getElementById("adminEmail").value = '';
+                document.getElementById("adminPass").value = '';
+                // Renderizar tudo após o login do admin
+                db.ref("pessoas").once("value").then(renderPessoas);
+                db.ref("votantes").once("value").then(renderVotantes);
+            })
+            .catch((error) => {
+                // Tratar erros de login
+                let errorMessage = "Erro de login. Verifique o email e a senha.";
+                if (error.code === 'auth/user-not-found') {
+                    errorMessage = "Usuário não encontrado. Crie um administrador ou verifique o email.";
+                } else if (error.code === 'auth/wrong-password') {
+                    errorMessage = "Senha incorreta.";
+                }
+                alert(`Erro: ${errorMessage}`);
+                console.error("Erro de login do Admin:", error);
+            });
     }
-  }
 
-  function removeVote(nome) {
-    if (!isAdmin) return;
-    if (confirm(`Deseja remover um voto de "${nome}"?`)) {
-      const votoRef = db.ref("pessoas/" + nome + "/votos");
-      votoRef.transaction(v => {
-        if (!v || v <= 0) return 0;
-        return v - 1;
-      });
+    function logoutAdmin() {
+        auth.signOut().then(() => {
+            // Logout bem-sucedido
+            isAdmin = false;
+            document.getElementById("adminPanel").classList.add("hidden");
+            document.getElementById("logoutBtn").classList.add("hidden");
+            document.getElementById("votantesList").innerHTML = ''; // Limpa a lista de votantes
+            alert("🔒 Admin deslogado.");
+            // Re-render para esconder botões admin
+            db.ref("pessoas").once("value").then(renderPessoas);
+        }).catch((error) => {
+            console.error("Erro ao deslogar o Admin:", error);
+            alert("Erro ao deslogar.");
+        });
     }
-  }
 
-  function renderPessoas(snapshot) {
-    const voteList = document.getElementById("voteList");
-    const rankingList = document.getElementById("rankingList");
+    // --- Funções de Gerenciamento de Pessoas (Candidatos) ---
 
-    const pessoas = [];
-    snapshot.forEach(child => {
-      const nome = child.key;
-      const votos = child.val().votos || 0;
-      pessoas.push({ nome, votos });
+    function addPerson() {
+        if (!isAdmin) {
+            alert("Apenas administradores podem adicionar pessoas.");
+            return;
+        }
+        const nome = document.getElementById("personName").value.trim();
+        if (!nome) {
+            alert("Por favor, digite o nome da pessoa.");
+            return;
+        }
+        const pessoaRef = db.ref("pessoas/" + nome);
+        pessoaRef.once("value", snapshot => {
+            if (snapshot.exists()) {
+                alert(`A pessoa "${nome}" já existe.`);
+            } else {
+                pessoaRef.set({ votos: 0 })
+                    .then(() => {
+                        alert(`"${nome}" adicionado com sucesso!`);
+                        document.getElementById("personName").value = '';
+                    })
+                    .catch(error => {
+                        console.error("Erro ao adicionar pessoa:", error);
+                        alert("Erro ao adicionar pessoa.");
+                    });
+            }
+        });
+    }
+
+    function removePerson(nome) {
+        if (!isAdmin) return;
+        if (confirm(`Deseja remover "${nome}" e todos os seus votos?`)) {
+            db.ref("pessoas/" + nome).remove()
+                .then(() => {
+                    alert(`"${nome}" removido com sucesso!`);
+                })
+                .catch(error => {
+                    console.error("Erro ao remover pessoa:", error);
+                    alert("Erro ao remover pessoa.");
+                });
+        }
+    }
+
+    // --- Funções de Votação ---
+
+    function vote(nomeCandidato) {
+        const voter = document.getElementById("voterName").value.trim();
+        if (!voter) {
+            alert("Por favor, digite seu nome completo antes de votar!");
+            return;
+        }
+
+        const votanteRef = db.ref("votantes/" + voter);
+
+        votanteRef.once("value", snapshot => {
+            if (snapshot.exists()) {
+                alert(`Você, ${voter}, já votou em ${snapshot.val()}! Cada pessoa pode votar apenas uma vez.`);
+            } else {
+                // Salvar o nome do candidato votado
+                votanteRef.set(nomeCandidato)
+                    .then(() => {
+                        // Incrementa voto do candidato
+                        const pessoaRef = db.ref("pessoas/" + nomeCandidato + "/votos");
+                        pessoaRef.transaction(currentVotes => {
+                            return (currentVotes || 0) + 1;
+                        });
+                        alert(`✅ Seu voto para ${nomeCandidato} foi registrado com sucesso!`);
+                        document.getElementById("voterName").value = ''; // Limpa o campo do nome do votante
+                    })
+                    .catch(error => {
+                        console.error("Erro ao registrar voto:", error);
+                        alert("Ocorreu um erro ao registrar seu voto.");
+                    });
+            }
+        });
+    }
+
+    // --- Funções de Gerenciamento de Votantes (Admin) ---
+
+    function removeVotante(nomeVotante) {
+        if (!isAdmin) return;
+        if (confirm(`Deseja remover o votante "${nomeVotante}"? Isso removerá o voto dele e permitirá que ele vote novamente.`)) {
+            const votanteRef = db.ref("votantes/" + nomeVotante);
+
+            votanteRef.once("value", snapshot => {
+                if (snapshot.exists()) {
+                    const candidatoVotado = snapshot.val();
+
+                    // Remove o votante
+                    votanteRef.remove().then(() => {
+                        // Diminuir o voto do candidato votado
+                        const votoCandidatoRef = db.ref("pessoas/" + candidatoVotado + "/votos");
+                        votoCandidatoRef.transaction(currentVotes => {
+                            if (currentVotes && currentVotes > 0) {
+                                return currentVotes - 1;
+                            }
+                            return 0; // Garante que não vá abaixo de zero
+                        });
+                        alert(`🗑️ Votante "${nomeVotante}" removido e voto de "${candidatoVotado}" atualizado.`);
+                    }).catch(error => {
+                        console.error("Erro ao remover votante:", error);
+                        alert("Erro ao remover votante.");
+                    });
+                } else {
+                    alert("Votante não encontrado.");
+                }
+            });
+        }
+    }
+
+    // --- Funções de Renderização da UI ---
+
+    function renderPessoas(snapshot) {
+        const voteList = document.getElementById("voteList");
+        const rankingList = document.getElementById("rankingList");
+
+        const pessoas = [];
+        snapshot.forEach(child => {
+            const nome = child.key;
+            const votos = child.val().votos || 0;
+            pessoas.push({ nome, votos });
+        });
+
+        // Renderizar lista de votação
+        voteList.innerHTML = '';
+        if (pessoas.length === 0) {
+            voteList.innerHTML = '<p>Nenhuma pessoa adicionada para votação ainda.</p>';
+        } else {
+            pessoas.forEach(p => {
+                const div = document.createElement("div");
+                div.className = "person";
+                div.innerHTML = `
+                    <span>${p.nome}</span>
+                    <button onclick="vote('${p.nome}')">Votar</button>
+                    ${isAdmin ? `<button class="danger" onclick="removePerson('${p.nome}')">Remover</button>` : ''}
+                `;
+                voteList.appendChild(div);
+            });
+        }
+
+        // Renderizar ranking
+        pessoas.sort((a, b) => b.votos - a.votos);
+        rankingList.innerHTML = '';
+        if (pessoas.length === 0) {
+            rankingList.innerHTML = '<p>Nenhum voto registrado ainda.</p>';
+        } else {
+            pessoas.slice(0, 12).forEach(p => { // Mostrar os 12 primeiros no ranking
+                const li = document.createElement("li");
+                li.textContent = `${p.nome} - ${p.votos} voto(s)`;
+                rankingList.appendChild(li);
+            });
+        }
+    }
+
+    function renderVotantes(snapshot) {
+        if (!isAdmin) {
+            document.getElementById("votantesList").innerHTML = ''; // Garante que a lista esteja vazia se não for admin
+            return;
+        }
+        const ul = document.getElementById("votantesList");
+        ul.innerHTML = '';
+        const votantes = [];
+        snapshot.forEach(child => {
+            votantes.push({ nome: child.key, votouEm: child.val() });
+        });
+
+        if (votantes.length === 0) {
+            ul.innerHTML = '<li>Ninguém votou ainda.</li>';
+        } else {
+            votantes.forEach(v => {
+                const li = document.createElement("li");
+                li.innerHTML = `
+                    ${v.nome} (votou em: ${v.votouEm})
+                    <button class="danger" onclick="removeVotante('${v.nome}')">Remover Votante</button>
+                `;
+                ul.appendChild(li);
+            });
+        }
+    }
+
+    // --- Escutando mudanças no banco de dados ---
+    db.ref("pessoas").on("value", renderPessoas);
+    db.ref("votantes").on("value", renderVotantes);
+
+    // Verifica o estado da autenticação ao carregar a página
+    auth.onAuthStateChanged(user => {
+        if (user) {
+            // Usuário logado
+            isAdmin = true;
+            document.getElementById("adminPanel").classList.remove("hidden");
+            document.getElementById("logoutBtn").classList.remove("hidden");
+            db.ref("pessoas").once("value").then(renderPessoas);
+            db.ref("votantes").once("value").then(renderVotantes);
+        } else {
+            // Usuário deslogado
+            isAdmin = false;
+            document.getElementById("adminPanel").classList.add("hidden");
+            document.getElementById("logoutBtn").classList.add("hidden");
+            document.getElementById("votantesList").innerHTML = '';
+            db.ref("pessoas").once("value").then(renderPessoas);
+        }
     });
 
-    voteList.innerHTML = '';
-    pessoas.forEach(p => {
-      const div = document.createElement("div");
-      div.className = "person";
-
-      let inner = `${p.nome} `;
-      inner += `<button onclick="vote('${p.nome}')">Votar</button>`;
-
-      if (isAdmin) {
-        inner += ` <button onclick="removePerson('${p.nome}')">Remover</button>`;
-        inner += ` <button onclick="removeVote('${p.nome}')">Remover voto</button>`;
-      }
-      div.innerHTML = inner;
-      voteList.appendChild(div);
-    });
-
-    pessoas.sort((a, b) => b.votos - a.votos);
-    rankingList.innerHTML = pessoas.slice(0, 12)
-      .map(p => `<li>${p.nome} - ${p.votos} voto(s)</li>`).join('');
-  }
-
-  function renderVotantes(snapshot) {
-    if (!isAdmin) return;
-    const ul = document.getElementById("votantesList");
-    ul.innerHTML = '';
-    snapshot.forEach(child => {
-      const nome = child.key;
-      const li = document.createElement("li");
-      li.textContent = nome + " ";
-
-      const btnRemover = document.createElement("button");
-      btnRemover.textContent = "Remover votante";
-      btnRemover.onclick = () => removeVotante(nome);
-      li.appendChild(btnRemover);
-
-      ul.appendChild(li);
-    });
-  }
-
-  // Escuta mudanças no banco de dados
-  db.ref("pessoas").on("value", renderPessoas);
-  db.ref("votantes").on("value", renderVotantes);
 </script>
 
 </body>
