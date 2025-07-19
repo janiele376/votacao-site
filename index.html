@@ -59,16 +59,26 @@
   const senhaAdmin = "40028922";
   let isAdmin = false;
 
-  function loginAdmin() {
-    const senha = document.getElementById("adminPass").value;
-    if (senha === senhaAdmin) {
-      isAdmin = true;
-      document.getElementById("adminPanel").classList.remove("hidden");
-      alert("Admin logado!");
-    } else {
-      alert("Senha incorreta");
-    }
+let ultimoSnapshot = null; // guarda o snapshot atual para reuso no login admin
+
+function loginAdmin() {
+  const senha = document.getElementById("adminPass").value;
+  if (senha === senhaAdmin) {
+    isAdmin = true;
+    document.getElementById("adminPanel").classList.remove("hidden");
+    alert("Admin logado!");
+    // RE-RENDERIZA a lista para mostrar o botão remover em todas as pessoas
+    if (ultimoSnapshot) renderPessoas(ultimoSnapshot);
+  } else {
+    alert("Senha incorreta");
   }
+}
+
+function renderPessoas(snapshot) {
+  ultimoSnapshot = snapshot; // guarda para reuso no login admin
+  // resto do código...
+}
+
 
   function addPerson() {
     const nome = document.getElementById("personName").value.trim();
