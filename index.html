@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Votação Popular</title>
+  <style>
+    body { font-family: Arial; background: #f2f2f2; padding: 20px; }
+    h1 { color: #333; }
+    .admin-area, .vote-area { margin-bottom: 20px; }
+    button { margin-top: 5px; margin-left: 5px; }
+    .hidden { display: none; }
+    .ranking { margin-top: 20px; }
+    .ranking li { margin: 5px 0; }
+    .person { margin: 10px 0; }
+  </style>
+</head>
+<body>
+  <h1>Mini Sistema de Votação</h1>
+
+  <!-- ADMINISTRADOR -->
+  <div class="admin-area">
+    <h2>Área do Administrador</h2>
+    <input type="password" id="adminPass" placeholder="Senha do admin">
+    <button onclick="loginAdmin()">Entrar</button>
+    <div id="adminPanel" class="hidden">
+      <input type="text" id="personName" placeholder="Nome da pessoa">
+      <button onclick="addPerson()">Adicionar Pessoa</button>
+    </div>
+  </div>
+
+  <!-- USUÁRIOS VISITANTES -->
+  <div class="vote-area">
+    <h2>Vote em alguém:</h2>
+    <div id="voteList"></div>
+  </div>
+
+  <!-- RANKING -->
+  <div class="ranking">
+    <h2>Ranking Atual:</h2>
+    <ol id="rankingList"></ol>
+  </div>
+
+  <script>
+    let pessoas = [];
+    let votos = {};
+    const senhaAdmin = "1234";
+    let isAdmin = false;
+
+    function loginAdmin() {
+      const senha = document.getElementById("adminPass").value;
+      if (senha === senhaAdmin) {
+        isAdmin = true;
+        document.getElementById("adminPanel").classList.remove("hidden");
+        updateVoteList(); // Atualiza com botões extras
+        alert("Acesso liberado!");
+      } else {
+        alert("Senha incorreta!");
+      }
+    }
+
+    function addPerson() {
+      const nome = document.getElementById("personName").value.trim();
+      if (nome && !pessoas.includes(nome)) {
+        pessoas.push(nome);
+        votos[nome] = 0;
+        updateVoteList();
+        updateRanking();
+        document.getElementById("personName").value = '';
+      } else {
+        alert("Nome inválido ou já existente.");
+      }
+    }
+
+    function removePerson(nome) {
+      if (!isAdmin) return;
+      if (confirm(`Deseja realmente remover ${nome}?`)) {
+        pessoas = pessoas.filter(p => p !== nome);
+        delete votos[nome];
+        updateVoteList();
+        updateRanking();
+      }
+    }
+
+    function vote(nome) {
+      votos[nome]++;
+      updateRanking();
+      alert(`Você votou em ${nome}!`);
+    }
+
+    function unvote(nome) {
+      if (votos[nome] > 0) {
+        votos[nome]--;
+        updateRanking();
+        alert(`Você retirou um voto de ${nome}.`);
+      } else {
+        alert(`${nome} já está com zero votos.`);
+      }
+    }
+
+    function updateVoteList() {
+      const voteDiv = document.getElementById("voteList");
+      voteDiv.innerHTML = "";
+      pessoas.forEach(nome => {
+        const div = document.createElement("div");
+        div.className = "person";
+        div.innerHTML = `
+          ${nome} 
+          <button onclick="vote('${nome}')">Votar</button>
+          <button onclick="unvote('${nome}')">Retirar voto</button>
+          ${isAdmin ? `<button onclick="removePerson('${nome}')">Remover pessoa</button>` : ''}
+        `;
+        voteDiv.appendChild(div);
+      });
+    }
+
+    function updateRanking() {
+      const ranking = Object.entries(votos)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 12);
+      const rankingList = document.getElementById("rankingList");
+      rankingList.innerHTML = ranking.map(([nome, votos]) => `<li>${nome} - ${votos} voto(s)</li>`).join("");
+    }
+  </script>
+</body>
+</html>
