@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Votação Online</title>
+  <title>Votação Pubg</title>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
   <style>
@@ -12,16 +12,18 @@
     .hidden { display: none; }
     .person { margin: 10px 0; }
     button { margin-left: 5px; }
+    #logoutBtn { margin-left: 10px; }
   </style>
 </head>
 <body>
 
-  <h1>Votação Popular</h1>
+  <h1>Votação Pubg</h1>
 
   <div class="admin-area">
     <h2>Área do Administrador</h2>
     <input type="password" id="adminPass" placeholder="Senha do admin" />
     <button onclick="loginAdmin()">Entrar</button>
+    <button id="logoutBtn" class="hidden" onclick="logoutAdmin()">Sair do Admin</button>
     <div id="adminPanel" class="hidden">
       <input type="text" id="personName" placeholder="Nome da pessoa" />
       <button onclick="addPerson()">Adicionar Pessoa</button>
@@ -63,6 +65,7 @@
     if(adminSalvo === 'true') {
       isAdmin = true;
       document.getElementById("adminPanel").classList.remove("hidden");
+      document.getElementById("logoutBtn").classList.remove("hidden");
       db.ref("pessoas").once("value").then(snapshot => {
         renderPessoas(snapshot);
       });
@@ -75,11 +78,20 @@
       isAdmin = true;
       localStorage.setItem('adminLogado', 'true');
       document.getElementById("adminPanel").classList.remove("hidden");
+      document.getElementById("logoutBtn").classList.remove("hidden");
       alert("Admin logado!");
       if (ultimoSnapshot) renderPessoas(ultimoSnapshot);
     } else {
       alert("Senha incorreta");
     }
+  }
+
+  function logoutAdmin() {
+    isAdmin = false;
+    localStorage.removeItem('adminLogado');
+    document.getElementById("adminPanel").classList.add("hidden");
+    document.getElementById("logoutBtn").classList.add("hidden");
+    renderPessoas(ultimoSnapshot);
   }
 
   function addPerson() {
@@ -102,6 +114,7 @@
   }
 
   function unvote(nome) {
+    if (!isAdmin) return; // Só admin pode tirar voto
     const ref = db.ref("pessoas/" + nome + "/votos");
     ref.transaction(v => Math.max((v || 0) - 1, 0));
   }
