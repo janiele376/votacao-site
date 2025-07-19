@@ -1,50 +1,55 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Sistema de Votação</title>
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
-<style>
-  body { font-family: Arial, sans-serif; padding: 20px; background: #f7f7f7; }
-  h1, h2 { color: #333; }
-  .hidden { display: none; }
-  button { margin-left: 8px; }
-  ul { list-style: none; padding-left: 0; }
-  li { margin: 8px 0; background: white; padding: 10px; border-radius: 5px; }
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sistema de Votação</title>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; background: #f7f7f7; }
+    h1, h2 { color: #333; }
+    .hidden { display: none; }
+    button { margin-left: 8px; cursor: pointer; }
+    ul { list-style: none; padding-left: 0; }
+    li { margin: 8px 0; background: white; padding: 10px; border-radius: 5px; }
+  </style>
 </head>
 <body>
 
-<h1>Sistema de Votação</h1>
+  <h1>Sistema de Votação</h1>
 
-<div id="loginAdmin">
-  <h2>Login do Admin</h2>
-  <input type="password" id="senhaAdmin" placeholder="Senha do admin" />
-  <button onclick="loginAdmin()">Entrar</button>
-</div>
+  <div id="loginAdmin">
+    <h2>Login do Admin</h2>
+    <input type="password" id="senhaAdmin" placeholder="Senha do admin" />
+    <button onclick="loginAdmin()">Entrar</button>
+  </div>
 
-<div id="adminPanel" class="hidden">
-  <h2>Painel do Admin</h2>
-  <input type="text" id="novoCandidato" placeholder="Nome do candidato" />
-  <button onclick="adicionarCandidato()">Adicionar Candidato</button>
-  <button onclick="logoutAdmin()">Sair do Admin</button>
+  <div id="adminPanel" class="hidden">
+    <h2>Painel do Admin</h2>
+    <input type="text" id="novoCandidato" placeholder="Nome do candidato" />
+    <button onclick="adicionarCandidato()">Adicionar Candidato</button>
+    <button onclick="logoutAdmin()">Sair do Admin</button>
 
-  <h3>Candidatos</h3>
-  <ul id="listaCandidatosAdmin"></ul>
+    <h3>Candidatos</h3>
+    <ul id="listaCandidatosAdmin"></ul>
 
-  <h3>Votantes</h3>
-  <ul id="listaVotantes"></ul>
-</div>
+    <h3>Votantes</h3>
+    <ul id="listaVotantes"></ul>
+  </div>
 
-<h2>Votação</h2>
-<ul id="listaCandidatos"></ul>
+  <h2>Votação</h2>
+  <ul id="listaCandidatos"></ul>
 
 <script>
+// Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
 import { getAnalytics } from "firebase/analytics";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
 
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
   apiKey: "AIzaSyBR0RGWG5C8-CVG-RmJVUMEWstKGAVm5ig",
   authDomain: "votacao-pubg.firebaseapp.com",
@@ -62,7 +67,7 @@ const analytics = getAnalytics(app);
 
   let isAdmin = false;
 
-  // Funções Admin
+  // --- Funções Admin ---
 
   function loginAdmin() {
     const senha = document.getElementById('senhaAdmin').value;
@@ -81,6 +86,7 @@ const analytics = getAnalytics(app);
     isAdmin = false;
     document.getElementById('loginAdmin').classList.remove('hidden');
     document.getElementById('adminPanel').classList.add('hidden');
+    carregarCandidatos();
   }
 
   function adicionarCandidato() {
@@ -96,15 +102,17 @@ const analytics = getAnalytics(app);
   function removerCandidato(nome) {
     if (!confirm(`Remover o candidato ${nome}?`)) return;
     db.ref('candidatos/' + nome).remove();
-    db.ref('votos/' + nome).remove();
-    db.ref('votantes').once('value', snapshot => {
-      snapshot.forEach(userSnap => {
+    // Remover votos desse candidato de todos votantes
+    db.ref('votantes').once('value', snap => {
+      snap.forEach(userSnap => {
         if (userSnap.hasChild(nome)) {
           db.ref(`votantes/${userSnap.key}/${nome}`).remove();
         }
       });
     });
   }
+
+  // --- Funções para carregar listas ---
 
   function carregarCandidatos() {
     const ulAdmin = document.getElementById('listaCandidatosAdmin');
@@ -119,7 +127,7 @@ const analytics = getAnalytics(app);
       Object.entries(candidatos).forEach(([nome, data]) => {
         // Lista admin
         const liAdmin = document.createElement('li');
-        liAdmin.textContent = `${nome} - ${data.votos} votos `;
+        liAdmin.textContent = `${nome} - ${data.votos} voto(s) `;
         if (isAdmin) {
           const btnRemover = document.createElement('button');
           btnRemover.textContent = 'Remover';
@@ -128,7 +136,7 @@ const analytics = getAnalytics(app);
         }
         ulAdmin.appendChild(liAdmin);
 
-        // Lista votacao (visitantes)
+        // Lista votação (visitantes)
         const liVote = document.createElement('li');
         liVote.textContent = nome + ' ';
         const btnVotar = document.createElement('button');
@@ -144,7 +152,7 @@ const analytics = getAnalytics(app);
     const ul = document.getElementById('listaVotantes');
     db.ref('votantes').on('value', snapshot => {
       ul.innerHTML = '';
-      if (!isAdmin) return; // garante que só admin veja
+      if (!isAdmin) return; // só admin vê essa lista
 
       const votantes = snapshot.val() || {};
       Object.entries(votantes).forEach(([nome, votos]) => {
@@ -162,11 +170,13 @@ const analytics = getAnalytics(app);
     });
   }
 
+  // --- Funções para remover votantes e votos ---
+
   function removerVotante(nome) {
     if (!confirm(`Remover votante ${nome} e seus votos?`)) return;
     db.ref('votantes/' + nome).once('value', snap => {
       const votos = snap.val() || {};
-      // Diminuir votos dos candidatos votados por esse usuário
+      // Diminuir votos dos candidatos votados
       Object.keys(votos).forEach(candidato => {
         const refVoto = db.ref('candidatos/' + candidato + '/votos');
         refVoto.transaction(v => (v || 0) - 1);
@@ -175,6 +185,8 @@ const analytics = getAnalytics(app);
       db.ref('votantes/' + nome).remove();
     });
   }
+
+  // --- Função votar ---
 
   function votar(nomeCandidato) {
     const nomeVotante = prompt('Digite seu nome para votar:');
@@ -205,9 +217,9 @@ const analytics = getAnalytics(app);
     });
   }
 
-  // Inicializa a lista ao carregar
-  carregarCandidatos();
+  // --- Inicialização ---
 
+  carregarCandidatos();
 </script>
 
 </body>
